@@ -4,71 +4,63 @@ import { FormsModule } from '@angular/forms';
 import { DialogComponent } from '../../components/dialog/dialog.component';
 import { ToastService } from '../../services/toast.service';
 
-type RouteStatus = 'On Schedule' | 'Delayed' | 'Completed' | 'Cancelled';
+type MaintStatus = 'Scheduled' | 'In Progress' | 'Completed' | 'Overdue';
 
-interface RouteRecord {
+interface MaintRecord {
   id: string;
-  routeId: string;
-  name: string;
-  origin: string;
-  destination: string;
-  driver: string;
-  stops: number;
-  distance: string;
-  status: RouteStatus;
-  progress: number;
-  eta: string;
+  recordId: string;
+  vehicle: string;
+  plate: string;
+  type: string;
+  technician: string;
+  cost: number;
   date: string;
+  status: MaintStatus;
+  notes: string;
 }
 
 @Component({
-  selector: 'app-routes-page',
+  selector: 'app-maintenance',
   standalone: true,
   imports: [CommonModule, FormsModule, DialogComponent],
   template: `
     <div class="page">
       <div class="page-header">
         <div>
-          <h1 class="page-title">Routes</h1>
-          <p class="page-sub">Plan and manage delivery routes</p>
+          <h1 class="page-title">Maintenance</h1>
+          <p class="page-sub">Vehicle service records and scheduled maintenance</p>
         </div>
         <button class="btn-primary" (click)="openAdd()">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
           </svg>
-          Add Route
+          Add Record
         </button>
       </div>
 
       <div class="stats-row">
         <div class="stat-box" *ngFor="let s of stats()">
           <div class="sb-icon" [style.background]="s.bg"></div>
-          <div>
-            <div class="sb-val">{{ s.value }}</div>
-            <div class="sb-label">{{ s.label }}</div>
-          </div>
+          <div><div class="sb-val">{{ s.value }}</div><div class="sb-label">{{ s.label }}</div></div>
         </div>
       </div>
 
       <div class="table-card">
         <div class="tc-header">
           <div>
-            <h3 class="tc-title">All Routes</h3>
-            <p class="tc-sub">{{ routes().length }} routes configured</p>
+            <h3 class="tc-title">Maintenance Records</h3>
+            <p class="tc-sub">{{ records().length }} total records</p>
           </div>
           <div class="tc-actions">
             <div class="search-wrap">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="si">
                 <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
               </svg>
-              <input class="search-in" placeholder="Search routes..." [(ngModel)]="searchQ" />
+              <input class="search-in" placeholder="Search records..." [(ngModel)]="searchQ" />
             </div>
             <select class="filter-sel" [(ngModel)]="filterStatus">
               <option value="">All Status</option>
-              <option>On Schedule</option>
-              <option>Delayed</option>
-              <option>Completed</option>
-              <option>Cancelled</option>
+              <option>Scheduled</option><option>In Progress</option><option>Completed</option><option>Overdue</option>
             </select>
           </div>
         </div>
@@ -76,46 +68,40 @@ interface RouteRecord {
           <table class="data-table">
             <thead>
               <tr>
-                <th>ROUTE ID</th>
-                <th>NAME</th>
-                <th>ORIGIN → DESTINATION</th>
-                <th>DRIVER</th>
-                <th>STOPS</th>
-                <th>DISTANCE</th>
-                <th>PROGRESS</th>
-                <th>ETA</th>
+                <th>RECORD ID</th>
+                <th>VEHICLE</th>
+                <th>SERVICE TYPE</th>
+                <th>TECHNICIAN</th>
+                <th>COST</th>
+                <th>DATE</th>
+                <th>NOTES</th>
                 <th>STATUS</th>
                 <th>ACTIONS</th>
               </tr>
             </thead>
             <tbody>
               <tr *ngFor="let r of filtered()" class="data-row">
-                <td><span class="mono-id">{{ r.routeId }}</span></td>
-                <td><span class="route-name">{{ r.name }}</span></td>
+                <td><span class="mono-id">{{ r.recordId }}</span></td>
                 <td>
-                  <div class="route-path">
-                    <span class="origin">{{ r.origin }}</span>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2">
-                      <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
-                    </svg>
-                    <span class="dest">{{ r.destination }}</span>
-                  </div>
-                </td>
-                <td><span class="drv-text">{{ r.driver }}</span></td>
-                <td><span class="num-badge">{{ r.stops }}</span></td>
-                <td><span class="dist-text">{{ r.distance }}</span></td>
-                <td>
-                  <div class="prog-cell">
-                    <div class="prog-bar">
-                      <div class="prog-fill" [style.width.%]="r.progress"
-                        [style.background]="r.status === 'Completed' ? '#10b981' : r.status === 'Delayed' ? '#ef4444' : '#0f2140'"></div>
+                  <div class="veh-cell">
+                    <div class="veh-icon">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h5l2 4v3h-7V8z"/>
+                      </svg>
                     </div>
-                    <span class="prog-num">{{ r.progress }}%</span>
+                    <div>
+                      <div class="veh-name">{{ r.vehicle }}</div>
+                      <div class="veh-plate">{{ r.plate }}</div>
+                    </div>
                   </div>
                 </td>
-                <td><span class="eta-text">{{ r.eta }}</span></td>
+                <td><span class="type-badge">{{ r.type }}</span></td>
+                <td><span class="small-text">{{ r.technician }}</span></td>
+                <td><span class="cost-text">{{ '$' + r.cost.toLocaleString() }}</span></td>
+                <td><span class="small-text">{{ r.date }}</span></td>
+                <td><span class="notes-text" [title]="r.notes">{{ r.notes.length > 30 ? r.notes.slice(0,30) + '...' : r.notes }}</span></td>
                 <td>
-                  <span class="status-pill" [class]="statusClass(r.status)">
+                  <span class="status-pill" [class]="maintStatusClass(r.status)">
                     <span class="sp-dot"></span>{{ r.status }}
                   </span>
                 </td>
@@ -137,7 +123,7 @@ interface RouteRecord {
                 </td>
               </tr>
               <tr *ngIf="filtered().length === 0">
-                <td colspan="10" class="empty-row"><p>No routes found</p></td>
+                <td colspan="9" class="empty-row"><p>No maintenance records found</p></td>
               </tr>
             </tbody>
           </table>
@@ -145,23 +131,26 @@ interface RouteRecord {
       </div>
     </div>
 
-    <app-dialog [open]="dialogOpen()" [title]="editingId() ? 'Edit Route' : 'Add New Route'"
-      [subtitle]="editingId() ? 'Update route details' : 'Configure a new delivery route'"
+    <app-dialog [open]="dialogOpen()" [title]="editingId() ? 'Edit Record' : 'Add Maintenance Record'"
+      [subtitle]="editingId() ? 'Update maintenance details' : 'Log a vehicle service or maintenance event'"
       maxWidth="700px" (closed)="closeDialog()">
       <div class="form-grid">
-        <div class="fg full"><label>Route Name *</label><input [(ngModel)]="form.name" placeholder="e.g. North District Loop" class="fi" /></div>
-        <div class="fg"><label>Origin *</label><input [(ngModel)]="form.origin" placeholder="Starting point" class="fi" /></div>
-        <div class="fg"><label>Destination *</label><input [(ngModel)]="form.destination" placeholder="End point" class="fi" /></div>
-        <div class="fg"><label>Assigned Driver</label><input [(ngModel)]="form.driver" placeholder="Driver name" class="fi" /></div>
-        <div class="fg"><label>Number of Stops</label><input type="number" [(ngModel)]="form.stops" min="0" class="fi" /></div>
-        <div class="fg"><label>Distance</label><input [(ngModel)]="form.distance" placeholder="e.g. 87 km" class="fi" /></div>
-        <div class="fg"><label>ETA</label><input [(ngModel)]="form.eta" placeholder="e.g. 14:30" class="fi" /></div>
+        <div class="fg"><label>Vehicle Model *</label><input [(ngModel)]="form.vehicle" placeholder="e.g. Volvo FH16" class="fi" /></div>
+        <div class="fg"><label>License Plate *</label><input [(ngModel)]="form.plate" placeholder="e.g. 44-BB-92" class="fi" /></div>
+        <div class="fg"><label>Service Type *</label>
+          <select [(ngModel)]="form.type" class="fi">
+            <option>Oil Change</option><option>Tire Replacement</option><option>Engine Check</option>
+            <option>Brake Service</option><option>Battery Replacement</option><option>Full Service</option><option>Other</option>
+          </select>
+        </div>
+        <div class="fg"><label>Technician</label><input [(ngModel)]="form.technician" placeholder="Technician name" class="fi" /></div>
+        <div class="fg"><label>Cost ($)</label><input type="number" [(ngModel)]="form.cost" min="0" class="fi" /></div>
         <div class="fg"><label>Date</label><input type="date" [(ngModel)]="form.date" class="fi" /></div>
-        <div class="fg"><label>Progress (%)</label><input type="number" [(ngModel)]="form.progress" min="0" max="100" class="fi" /></div>
-        <div class="fg">
+        <div class="fg full"><label>Notes</label><textarea [(ngModel)]="form.notes" placeholder="Service notes..." class="fi ta" rows="3"></textarea></div>
+        <div class="fg full">
           <label>Status</label>
           <select [(ngModel)]="form.status" class="fi">
-            <option>On Schedule</option><option>Delayed</option><option>Completed</option><option>Cancelled</option>
+            <option>Scheduled</option><option>In Progress</option><option>Completed</option><option>Overdue</option>
           </select>
         </div>
       </div>
@@ -169,7 +158,7 @@ interface RouteRecord {
         <button class="btn-cancel" (click)="closeDialog()">Cancel</button>
         <button class="btn-submit" (click)="submit()">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-          {{ editingId() ? 'Update Route' : 'Add Route' }}
+          {{ editingId() ? 'Update Record' : 'Save Record' }}
         </button>
       </div>
     </app-dialog>
@@ -203,24 +192,20 @@ interface RouteRecord {
     .data-row:last-child td { border-bottom: none; }
     .data-row:hover td { background: #f9fafb; }
     .mono-id { font-size: 11px; font-weight: 700; color: #64748b; font-family: monospace; }
-    .route-name { font-size: 13px; font-weight: 600; color: #1f2937; }
-    .route-path { display: flex; align-items: center; gap: 6px; font-size: 12px; }
-    .origin { color: #374151; font-weight: 500; }
-    .dest { color: #374151; font-weight: 500; }
-    .drv-text { font-size: 12px; color: #374151; }
-    .num-badge { font-size: 13px; font-weight: 700; color: #0f2140; }
-    .dist-text { font-size: 12px; color: #374151; }
-    .prog-cell { display: flex; align-items: center; gap: 8px; }
-    .prog-bar { width: 70px; height: 6px; background: #e5e7eb; border-radius: 3px; overflow: hidden; flex-shrink: 0; }
-    .prog-fill { height: 100%; border-radius: 3px; }
-    .prog-num { font-size: 11px; font-weight: 700; color: #374151; }
-    .eta-text { font-size: 12px; color: #374151; font-family: monospace; }
+    .veh-cell { display: flex; align-items: center; gap: 8px; }
+    .veh-icon { width: 28px; height: 28px; background: #f1f4f8; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #64748b; flex-shrink: 0; }
+    .veh-name { font-size: 13px; font-weight: 600; color: #1f2937; }
+    .veh-plate { font-size: 11px; color: #94a3b8; font-family: monospace; }
+    .type-badge { font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; background: #f1f4f8; color: #374151; }
+    .small-text { font-size: 12px; color: #374151; }
+    .cost-text { font-size: 13px; font-weight: 700; color: #059669; }
+    .notes-text { font-size: 12px; color: #6b7280; }
     .status-pill { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; white-space: nowrap; }
     .sp-dot { width: 6px; height: 6px; border-radius: 50%; }
-    .sp-schedule { background: #dcfce7; color: #15803d; } .sp-schedule .sp-dot { background: #16a34a; }
-    .sp-delayed { background: #fee2e2; color: #991b1b; } .sp-delayed .sp-dot { background: #ef4444; }
-    .sp-completed { background: #dbeafe; color: #1e40af; } .sp-completed .sp-dot { background: #3b82f6; }
-    .sp-cancelled { background: #f3f4f6; color: #374151; } .sp-cancelled .sp-dot { background: #9ca3af; }
+    .sp-scheduled { background: #dbeafe; color: #1e40af; } .sp-scheduled .sp-dot { background: #3b82f6; }
+    .sp-inprogress { background: #fef9c3; color: #92400e; } .sp-inprogress .sp-dot { background: #f59e0b; }
+    .sp-completed { background: #dcfce7; color: #15803d; } .sp-completed .sp-dot { background: #16a34a; }
+    .sp-overdue { background: #fee2e2; color: #991b1b; } .sp-overdue .sp-dot { background: #ef4444; }
     .act-btns { display: flex; gap: 6px; }
     .act-btn { width: 30px; height: 30px; border: 1.5px solid #e5e7eb; border-radius: 6px; background: white; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.18s; }
     .edit-b { color: #3b82f6; } .edit-b:hover { background: #eff6ff; border-color: #bfdbfe; }
@@ -232,80 +217,80 @@ interface RouteRecord {
     .fg label { font-size: 12px; font-weight: 700; color: #374151; }
     .fi { padding: 10px 12px; border: 1.5px solid #e5e7eb; border-radius: 8px; font-size: 13px; color: #1f2937; background: #fafafa; outline: none; }
     .fi:focus { border-color: #0f2140; background: white; box-shadow: 0 0 0 3px rgba(15,33,64,0.06); }
+    .ta { resize: vertical; min-height: 72px; }
     .dialog-footer { display: flex; justify-content: flex-end; gap: 10px; padding-top: 16px; border-top: 1px solid #f1f4f8; }
     .btn-cancel { padding: 10px 20px; border: 1.5px solid #e5e7eb; border-radius: 8px; background: white; font-size: 13px; font-weight: 600; cursor: pointer; color: #374151; }
     .btn-submit { display: flex; align-items: center; gap: 7px; padding: 10px 22px; background: linear-gradient(135deg, #0f2140, #1a3a5c); color: white; border: none; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; }
   `]
 })
-export class RoutesPageComponent {
+export class MaintenanceComponent {
   dialogOpen = signal(false);
   editingId = signal<string | null>(null);
   searchQ = '';
   filterStatus = '';
   form = this.emptyForm();
-  private counter = 6;
+  private counter = 4;
 
-  routes = signal<RouteRecord[]>([
-    { id: '1', routeId: 'RT-01', name: 'North District Loop', origin: 'Central Depot', destination: 'North Hub', driver: 'Jameson Miller', stops: 12, distance: '87 km', status: 'On Schedule', progress: 72, eta: '14:30', date: '2026-04-19' },
-    { id: '2', routeId: 'RT-02', name: 'City Center Express', origin: 'Depot A', destination: 'City Hall', driver: 'Leila Vance', stops: 8, distance: '45 km', status: 'Completed', progress: 100, eta: '12:15', date: '2026-04-19' },
-    { id: '3', routeId: 'RT-03', name: 'East Industrial Zone', origin: 'West Gate', destination: 'East Factory', driver: 'Marcus Reid', stops: 15, distance: '120 km', status: 'Delayed', progress: 34, eta: '17:45', date: '2026-04-19' },
-    { id: '4', routeId: 'RT-04', name: 'South Suburbs Route', origin: 'Central Depot', destination: 'South Mall', driver: 'Sara Kim', stops: 10, distance: '65 km', status: 'On Schedule', progress: 88, eta: '15:20', date: '2026-04-19' },
-    { id: '5', routeId: 'RT-05', name: 'Airport Freight', origin: 'Port Terminal', destination: 'Airport', driver: 'Ryan Patel', stops: 4, distance: '38 km', status: 'Completed', progress: 100, eta: '11:00', date: '2026-04-19' }
+  records = signal<MaintRecord[]>([
+    { id: '1', recordId: '#MNT-001', vehicle: 'Volvo FH16', plate: '44-BB-92', type: 'Oil Change', technician: 'Tom Bradley', cost: 320, date: '2026-04-15', status: 'Completed', notes: 'Full synthetic 10W-40 replaced. Filter changed.' },
+    { id: '2', recordId: '#MNT-002', vehicle: 'Scania R500', plate: '09-RR-45', type: 'Brake Service', technician: 'Anna Clarke', cost: 850, date: '2026-04-20', status: 'Scheduled', notes: 'Front and rear brake pads replacement needed.' },
+    { id: '3', recordId: '#MNT-003', vehicle: 'Isuzu NPR', plate: '12-XZ-01', type: 'Engine Check', technician: 'Mike Johnson', cost: 450, date: '2026-04-10', status: 'Overdue', notes: 'Warning light diagnostic required urgently.' },
+    { id: '4', recordId: '#MNT-004', vehicle: 'MAN TGX', plate: 'RY-78-PL', type: 'Full Service', technician: 'Tom Bradley', cost: 1200, date: '2026-04-19', status: 'In Progress', notes: 'Annual full service including all fluid checks.' }
   ]);
 
   constructor(private toast: ToastService) {}
 
   stats() {
-    const r = this.routes();
+    const r = this.records();
     return [
-      { value: r.filter(x => x.status === 'On Schedule').length, label: 'On Schedule', bg: '#dcfce7' },
-      { value: r.filter(x => x.status === 'Delayed').length, label: 'Delayed', bg: '#fee2e2' },
-      { value: r.filter(x => x.status === 'Completed').length, label: 'Completed', bg: '#dbeafe' },
-      { value: r.length, label: 'Total Routes', bg: '#f3f4f6' }
+      { value: r.filter(x => x.status === 'Scheduled').length, label: 'Scheduled', bg: '#dbeafe' },
+      { value: r.filter(x => x.status === 'In Progress').length, label: 'In Progress', bg: '#fef9c3' },
+      { value: r.filter(x => x.status === 'Completed').length, label: 'Completed', bg: '#dcfce7' },
+      { value: r.filter(x => x.status === 'Overdue').length, label: 'Overdue', bg: '#fee2e2' }
     ];
   }
 
   filtered() {
-    return this.routes().filter(r => {
+    return this.records().filter(r => {
       const q = this.searchQ.toLowerCase();
-      const matchQ = !q || r.name.toLowerCase().includes(q) || r.routeId.toLowerCase().includes(q) || r.driver.toLowerCase().includes(q);
+      const matchQ = !q || r.vehicle.toLowerCase().includes(q) || r.recordId.toLowerCase().includes(q) || r.technician.toLowerCase().includes(q);
       const matchS = !this.filterStatus || r.status === this.filterStatus;
       return matchQ && matchS;
     });
   }
 
-  statusClass(s: RouteStatus): string {
-    if (s === 'On Schedule') return 'status-pill sp-schedule';
-    if (s === 'Delayed') return 'status-pill sp-delayed';
+  maintStatusClass(s: MaintStatus): string {
+    if (s === 'Scheduled') return 'status-pill sp-scheduled';
+    if (s === 'In Progress') return 'status-pill sp-inprogress';
     if (s === 'Completed') return 'status-pill sp-completed';
-    return 'status-pill sp-cancelled';
+    return 'status-pill sp-overdue';
   }
 
   openAdd(): void { this.editingId.set(null); this.form = this.emptyForm(); this.dialogOpen.set(true); }
-  startEdit(r: RouteRecord): void {
+  startEdit(r: MaintRecord): void {
     this.editingId.set(r.id);
-    this.form = { name: r.name, origin: r.origin, destination: r.destination, driver: r.driver, stops: r.stops, distance: r.distance, status: r.status, progress: r.progress, eta: r.eta, date: r.date };
+    this.form = { vehicle: r.vehicle, plate: r.plate, type: r.type, technician: r.technician, cost: r.cost, date: r.date, status: r.status, notes: r.notes };
     this.dialogOpen.set(true);
   }
   submit(): void {
-    if (!this.form.name.trim() || !this.form.origin.trim() || !this.form.destination.trim()) {
-      this.toast.error('Name, origin and destination are required.', 'Validation Error'); return;
+    if (!this.form.vehicle.trim() || !this.form.plate.trim()) {
+      this.toast.error('Vehicle and plate are required.', 'Validation Error'); return;
     }
     if (this.editingId()) {
-      this.routes.update(rs => rs.map(r => r.id === this.editingId() ? { ...r, ...this.form } : r));
-      this.toast.success(`Route "${this.form.name}" updated.`, 'Route Updated');
+      this.records.update(rs => rs.map(r => r.id === this.editingId() ? { ...r, ...this.form } : r));
+      this.toast.success('Maintenance record updated.', 'Updated');
     } else {
-      this.routes.update(rs => [...rs, { id: String(Date.now()), routeId: `RT-0${++this.counter}`, ...this.form }]);
-      this.toast.success(`Route "${this.form.name}" added.`, 'Route Added');
+      this.records.update(rs => [...rs, { id: String(Date.now()), recordId: `#MNT-00${++this.counter}`, ...this.form }]);
+      this.toast.success('Maintenance record saved.', 'Record Added');
     }
     this.closeDialog();
   }
-  remove(r: RouteRecord): void {
-    this.routes.update(rs => rs.filter(x => x.id !== r.id));
-    this.toast.warning(`Route "${r.name}" removed.`, 'Route Removed');
+  remove(r: MaintRecord): void {
+    this.records.update(rs => rs.filter(x => x.id !== r.id));
+    this.toast.warning(`Record ${r.recordId} deleted.`, 'Deleted');
   }
   closeDialog(): void { this.dialogOpen.set(false); this.editingId.set(null); }
   private emptyForm() {
-    return { name: '', origin: '', destination: '', driver: '', stops: 0, distance: '', status: 'On Schedule' as RouteStatus, progress: 0, eta: '', date: new Date().toISOString().split('T')[0] };
+    return { vehicle: '', plate: '', type: 'Oil Change', technician: '', cost: 0, date: new Date().toISOString().split('T')[0], status: 'Scheduled' as MaintStatus, notes: '' };
   }
 }

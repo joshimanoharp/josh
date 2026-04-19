@@ -4,71 +4,64 @@ import { FormsModule } from '@angular/forms';
 import { DialogComponent } from '../../components/dialog/dialog.component';
 import { ToastService } from '../../services/toast.service';
 
-type RouteStatus = 'On Schedule' | 'Delayed' | 'Completed' | 'Cancelled';
+type ShipmentStatus = 'Pending' | 'In Transit' | 'Delivered' | 'Failed';
 
-interface RouteRecord {
+interface Shipment {
   id: string;
-  routeId: string;
-  name: string;
+  shipmentId: string;
+  description: string;
   origin: string;
   destination: string;
   driver: string;
-  stops: number;
-  distance: string;
-  status: RouteStatus;
-  progress: number;
+  weight: number;
+  status: ShipmentStatus;
   eta: string;
   date: string;
+  priority: 'High' | 'Medium' | 'Low';
 }
 
 @Component({
-  selector: 'app-routes-page',
+  selector: 'app-shipments',
   standalone: true,
   imports: [CommonModule, FormsModule, DialogComponent],
   template: `
     <div class="page">
       <div class="page-header">
         <div>
-          <h1 class="page-title">Routes</h1>
-          <p class="page-sub">Plan and manage delivery routes</p>
+          <h1 class="page-title">Shipments</h1>
+          <p class="page-sub">Track and manage all shipment orders</p>
         </div>
         <button class="btn-primary" (click)="openAdd()">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
           </svg>
-          Add Route
+          New Shipment
         </button>
       </div>
 
       <div class="stats-row">
         <div class="stat-box" *ngFor="let s of stats()">
           <div class="sb-icon" [style.background]="s.bg"></div>
-          <div>
-            <div class="sb-val">{{ s.value }}</div>
-            <div class="sb-label">{{ s.label }}</div>
-          </div>
+          <div><div class="sb-val">{{ s.value }}</div><div class="sb-label">{{ s.label }}</div></div>
         </div>
       </div>
 
       <div class="table-card">
         <div class="tc-header">
           <div>
-            <h3 class="tc-title">All Routes</h3>
-            <p class="tc-sub">{{ routes().length }} routes configured</p>
+            <h3 class="tc-title">All Shipments</h3>
+            <p class="tc-sub">{{ shipments().length }} total shipments</p>
           </div>
           <div class="tc-actions">
             <div class="search-wrap">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="si">
                 <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
               </svg>
-              <input class="search-in" placeholder="Search routes..." [(ngModel)]="searchQ" />
+              <input class="search-in" placeholder="Search shipments..." [(ngModel)]="searchQ" />
             </div>
             <select class="filter-sel" [(ngModel)]="filterStatus">
               <option value="">All Status</option>
-              <option>On Schedule</option>
-              <option>Delayed</option>
-              <option>Completed</option>
-              <option>Cancelled</option>
+              <option>Pending</option><option>In Transit</option><option>Delivered</option><option>Failed</option>
             </select>
           </div>
         </div>
@@ -76,58 +69,52 @@ interface RouteRecord {
           <table class="data-table">
             <thead>
               <tr>
-                <th>ROUTE ID</th>
-                <th>NAME</th>
+                <th>SHIPMENT ID</th>
+                <th>DESCRIPTION</th>
                 <th>ORIGIN → DESTINATION</th>
                 <th>DRIVER</th>
-                <th>STOPS</th>
-                <th>DISTANCE</th>
-                <th>PROGRESS</th>
+                <th>WEIGHT</th>
+                <th>PRIORITY</th>
+                <th>DATE</th>
                 <th>ETA</th>
                 <th>STATUS</th>
                 <th>ACTIONS</th>
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let r of filtered()" class="data-row">
-                <td><span class="mono-id">{{ r.routeId }}</span></td>
-                <td><span class="route-name">{{ r.name }}</span></td>
+              <tr *ngFor="let s of filtered()" class="data-row">
+                <td><span class="mono-id">{{ s.shipmentId }}</span></td>
+                <td><span class="desc-text">{{ s.description }}</span></td>
                 <td>
-                  <div class="route-path">
-                    <span class="origin">{{ r.origin }}</span>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2">
+                  <div class="path-cell">
+                    <span>{{ s.origin }}</span>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2">
                       <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
                     </svg>
-                    <span class="dest">{{ r.destination }}</span>
+                    <span>{{ s.destination }}</span>
                   </div>
                 </td>
-                <td><span class="drv-text">{{ r.driver }}</span></td>
-                <td><span class="num-badge">{{ r.stops }}</span></td>
-                <td><span class="dist-text">{{ r.distance }}</span></td>
+                <td><span class="small-text">{{ s.driver }}</span></td>
+                <td><span class="small-text">{{ s.weight }} kg</span></td>
                 <td>
-                  <div class="prog-cell">
-                    <div class="prog-bar">
-                      <div class="prog-fill" [style.width.%]="r.progress"
-                        [style.background]="r.status === 'Completed' ? '#10b981' : r.status === 'Delayed' ? '#ef4444' : '#0f2140'"></div>
-                    </div>
-                    <span class="prog-num">{{ r.progress }}%</span>
-                  </div>
+                  <span class="pri-badge" [class]="'pri-' + s.priority.toLowerCase()">{{ s.priority }}</span>
                 </td>
-                <td><span class="eta-text">{{ r.eta }}</span></td>
+                <td><span class="small-text">{{ s.date }}</span></td>
+                <td><span class="small-text mono">{{ s.eta }}</span></td>
                 <td>
-                  <span class="status-pill" [class]="statusClass(r.status)">
-                    <span class="sp-dot"></span>{{ r.status }}
+                  <span class="status-pill" [class]="shipStatusClass(s.status)">
+                    <span class="sp-dot"></span>{{ s.status }}
                   </span>
                 </td>
                 <td>
                   <div class="act-btns">
-                    <button class="act-btn edit-b" (click)="startEdit(r)">
+                    <button class="act-btn edit-b" (click)="startEdit(s)">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                         <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
                       </svg>
                     </button>
-                    <button class="act-btn del-b" (click)="remove(r)">
+                    <button class="act-btn del-b" (click)="remove(s)">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
                         <path d="M10 11v6"/><path d="M14 11v6"/>
@@ -137,7 +124,7 @@ interface RouteRecord {
                 </td>
               </tr>
               <tr *ngIf="filtered().length === 0">
-                <td colspan="10" class="empty-row"><p>No routes found</p></td>
+                <td colspan="10" class="empty-row"><p>No shipments found</p></td>
               </tr>
             </tbody>
           </table>
@@ -145,23 +132,27 @@ interface RouteRecord {
       </div>
     </div>
 
-    <app-dialog [open]="dialogOpen()" [title]="editingId() ? 'Edit Route' : 'Add New Route'"
-      [subtitle]="editingId() ? 'Update route details' : 'Configure a new delivery route'"
+    <app-dialog [open]="dialogOpen()" [title]="editingId() ? 'Edit Shipment' : 'New Shipment'"
+      [subtitle]="editingId() ? 'Update shipment details' : 'Create a new shipment order'"
       maxWidth="700px" (closed)="closeDialog()">
       <div class="form-grid">
-        <div class="fg full"><label>Route Name *</label><input [(ngModel)]="form.name" placeholder="e.g. North District Loop" class="fi" /></div>
-        <div class="fg"><label>Origin *</label><input [(ngModel)]="form.origin" placeholder="Starting point" class="fi" /></div>
-        <div class="fg"><label>Destination *</label><input [(ngModel)]="form.destination" placeholder="End point" class="fi" /></div>
+        <div class="fg full"><label>Description *</label><input [(ngModel)]="form.description" placeholder="Shipment description" class="fi" /></div>
+        <div class="fg"><label>Origin *</label><input [(ngModel)]="form.origin" placeholder="From" class="fi" /></div>
+        <div class="fg"><label>Destination *</label><input [(ngModel)]="form.destination" placeholder="To" class="fi" /></div>
         <div class="fg"><label>Assigned Driver</label><input [(ngModel)]="form.driver" placeholder="Driver name" class="fi" /></div>
-        <div class="fg"><label>Number of Stops</label><input type="number" [(ngModel)]="form.stops" min="0" class="fi" /></div>
-        <div class="fg"><label>Distance</label><input [(ngModel)]="form.distance" placeholder="e.g. 87 km" class="fi" /></div>
-        <div class="fg"><label>ETA</label><input [(ngModel)]="form.eta" placeholder="e.g. 14:30" class="fi" /></div>
+        <div class="fg"><label>Weight (kg)</label><input type="number" [(ngModel)]="form.weight" min="0" class="fi" /></div>
         <div class="fg"><label>Date</label><input type="date" [(ngModel)]="form.date" class="fi" /></div>
-        <div class="fg"><label>Progress (%)</label><input type="number" [(ngModel)]="form.progress" min="0" max="100" class="fi" /></div>
+        <div class="fg"><label>ETA</label><input [(ngModel)]="form.eta" placeholder="e.g. 15:30" class="fi" /></div>
         <div class="fg">
+          <label>Priority</label>
+          <select [(ngModel)]="form.priority" class="fi">
+            <option>High</option><option>Medium</option><option>Low</option>
+          </select>
+        </div>
+        <div class="fg full">
           <label>Status</label>
           <select [(ngModel)]="form.status" class="fi">
-            <option>On Schedule</option><option>Delayed</option><option>Completed</option><option>Cancelled</option>
+            <option>Pending</option><option>In Transit</option><option>Delivered</option><option>Failed</option>
           </select>
         </div>
       </div>
@@ -169,7 +160,7 @@ interface RouteRecord {
         <button class="btn-cancel" (click)="closeDialog()">Cancel</button>
         <button class="btn-submit" (click)="submit()">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-          {{ editingId() ? 'Update Route' : 'Add Route' }}
+          {{ editingId() ? 'Update Shipment' : 'Create Shipment' }}
         </button>
       </div>
     </app-dialog>
@@ -203,24 +194,20 @@ interface RouteRecord {
     .data-row:last-child td { border-bottom: none; }
     .data-row:hover td { background: #f9fafb; }
     .mono-id { font-size: 11px; font-weight: 700; color: #64748b; font-family: monospace; }
-    .route-name { font-size: 13px; font-weight: 600; color: #1f2937; }
-    .route-path { display: flex; align-items: center; gap: 6px; font-size: 12px; }
-    .origin { color: #374151; font-weight: 500; }
-    .dest { color: #374151; font-weight: 500; }
-    .drv-text { font-size: 12px; color: #374151; }
-    .num-badge { font-size: 13px; font-weight: 700; color: #0f2140; }
-    .dist-text { font-size: 12px; color: #374151; }
-    .prog-cell { display: flex; align-items: center; gap: 8px; }
-    .prog-bar { width: 70px; height: 6px; background: #e5e7eb; border-radius: 3px; overflow: hidden; flex-shrink: 0; }
-    .prog-fill { height: 100%; border-radius: 3px; }
-    .prog-num { font-size: 11px; font-weight: 700; color: #374151; }
-    .eta-text { font-size: 12px; color: #374151; font-family: monospace; }
+    .desc-text { font-size: 13px; font-weight: 600; color: #1f2937; }
+    .path-cell { display: flex; align-items: center; gap: 5px; font-size: 12px; color: #374151; }
+    .small-text { font-size: 12px; color: #374151; }
+    .mono { font-family: monospace; }
+    .pri-badge { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 6px; }
+    .pri-high { background: #fee2e2; color: #991b1b; }
+    .pri-medium { background: #fef9c3; color: #92400e; }
+    .pri-low { background: #dcfce7; color: #15803d; }
     .status-pill { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; white-space: nowrap; }
     .sp-dot { width: 6px; height: 6px; border-radius: 50%; }
-    .sp-schedule { background: #dcfce7; color: #15803d; } .sp-schedule .sp-dot { background: #16a34a; }
-    .sp-delayed { background: #fee2e2; color: #991b1b; } .sp-delayed .sp-dot { background: #ef4444; }
-    .sp-completed { background: #dbeafe; color: #1e40af; } .sp-completed .sp-dot { background: #3b82f6; }
-    .sp-cancelled { background: #f3f4f6; color: #374151; } .sp-cancelled .sp-dot { background: #9ca3af; }
+    .sp-pending { background: #f3f4f6; color: #374151; } .sp-pending .sp-dot { background: #9ca3af; }
+    .sp-transit { background: #dbeafe; color: #1e40af; } .sp-transit .sp-dot { background: #3b82f6; }
+    .sp-delivered { background: #dcfce7; color: #15803d; } .sp-delivered .sp-dot { background: #16a34a; }
+    .sp-failed { background: #fee2e2; color: #991b1b; } .sp-failed .sp-dot { background: #ef4444; }
     .act-btns { display: flex; gap: 6px; }
     .act-btn { width: 30px; height: 30px; border: 1.5px solid #e5e7eb; border-radius: 6px; background: white; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.18s; }
     .edit-b { color: #3b82f6; } .edit-b:hover { background: #eff6ff; border-color: #bfdbfe; }
@@ -237,75 +224,75 @@ interface RouteRecord {
     .btn-submit { display: flex; align-items: center; gap: 7px; padding: 10px 22px; background: linear-gradient(135deg, #0f2140, #1a3a5c); color: white; border: none; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; }
   `]
 })
-export class RoutesPageComponent {
+export class ShipmentsComponent {
   dialogOpen = signal(false);
   editingId = signal<string | null>(null);
   searchQ = '';
   filterStatus = '';
   form = this.emptyForm();
-  private counter = 6;
+  private counter = 5;
 
-  routes = signal<RouteRecord[]>([
-    { id: '1', routeId: 'RT-01', name: 'North District Loop', origin: 'Central Depot', destination: 'North Hub', driver: 'Jameson Miller', stops: 12, distance: '87 km', status: 'On Schedule', progress: 72, eta: '14:30', date: '2026-04-19' },
-    { id: '2', routeId: 'RT-02', name: 'City Center Express', origin: 'Depot A', destination: 'City Hall', driver: 'Leila Vance', stops: 8, distance: '45 km', status: 'Completed', progress: 100, eta: '12:15', date: '2026-04-19' },
-    { id: '3', routeId: 'RT-03', name: 'East Industrial Zone', origin: 'West Gate', destination: 'East Factory', driver: 'Marcus Reid', stops: 15, distance: '120 km', status: 'Delayed', progress: 34, eta: '17:45', date: '2026-04-19' },
-    { id: '4', routeId: 'RT-04', name: 'South Suburbs Route', origin: 'Central Depot', destination: 'South Mall', driver: 'Sara Kim', stops: 10, distance: '65 km', status: 'On Schedule', progress: 88, eta: '15:20', date: '2026-04-19' },
-    { id: '5', routeId: 'RT-05', name: 'Airport Freight', origin: 'Port Terminal', destination: 'Airport', driver: 'Ryan Patel', stops: 4, distance: '38 km', status: 'Completed', progress: 100, eta: '11:00', date: '2026-04-19' }
+  shipments = signal<Shipment[]>([
+    { id: '1', shipmentId: '#SHP-0001', description: 'Electronics Batch A', origin: 'Warehouse 1', destination: 'Tech Store North', driver: 'Jameson Miller', weight: 450, status: 'In Transit', priority: 'High', date: '2026-04-19', eta: '14:00' },
+    { id: '2', shipmentId: '#SHP-0002', description: 'Furniture Set B', origin: 'Depot A', destination: 'Home Decor Mall', driver: 'Leila Vance', weight: 820, status: 'Delivered', priority: 'Medium', date: '2026-04-18', eta: '11:30' },
+    { id: '3', shipmentId: '#SHP-0003', description: 'Food Supplies — Cold Chain', origin: 'Cold Depot', destination: 'Restaurant Zone', driver: 'Marcus Reid', weight: 320, status: 'Pending', priority: 'High', date: '2026-04-19', eta: '09:00' },
+    { id: '4', shipmentId: '#SHP-0004', description: 'Auto Parts Package', origin: 'Port Terminal', destination: 'Auto Factory', driver: 'Sara Kim', weight: 1200, status: 'Failed', priority: 'Low', date: '2026-04-17', eta: '16:00' }
   ]);
 
   constructor(private toast: ToastService) {}
 
   stats() {
-    const r = this.routes();
+    const s = this.shipments();
     return [
-      { value: r.filter(x => x.status === 'On Schedule').length, label: 'On Schedule', bg: '#dcfce7' },
-      { value: r.filter(x => x.status === 'Delayed').length, label: 'Delayed', bg: '#fee2e2' },
-      { value: r.filter(x => x.status === 'Completed').length, label: 'Completed', bg: '#dbeafe' },
-      { value: r.length, label: 'Total Routes', bg: '#f3f4f6' }
+      { value: s.filter(x => x.status === 'Pending').length, label: 'Pending', bg: '#f3f4f6' },
+      { value: s.filter(x => x.status === 'In Transit').length, label: 'In Transit', bg: '#dbeafe' },
+      { value: s.filter(x => x.status === 'Delivered').length, label: 'Delivered', bg: '#dcfce7' },
+      { value: s.filter(x => x.status === 'Failed').length, label: 'Failed', bg: '#fee2e2' }
     ];
   }
 
   filtered() {
-    return this.routes().filter(r => {
+    return this.shipments().filter(s => {
       const q = this.searchQ.toLowerCase();
-      const matchQ = !q || r.name.toLowerCase().includes(q) || r.routeId.toLowerCase().includes(q) || r.driver.toLowerCase().includes(q);
-      const matchS = !this.filterStatus || r.status === this.filterStatus;
+      const matchQ = !q || s.description.toLowerCase().includes(q) || s.shipmentId.toLowerCase().includes(q) || s.driver.toLowerCase().includes(q);
+      const matchS = !this.filterStatus || s.status === this.filterStatus;
       return matchQ && matchS;
     });
   }
 
-  statusClass(s: RouteStatus): string {
-    if (s === 'On Schedule') return 'status-pill sp-schedule';
-    if (s === 'Delayed') return 'status-pill sp-delayed';
-    if (s === 'Completed') return 'status-pill sp-completed';
-    return 'status-pill sp-cancelled';
+  shipStatusClass(st: ShipmentStatus): string {
+    if (st === 'Pending') return 'status-pill sp-pending';
+    if (st === 'In Transit') return 'status-pill sp-transit';
+    if (st === 'Delivered') return 'status-pill sp-delivered';
+    return 'status-pill sp-failed';
   }
 
   openAdd(): void { this.editingId.set(null); this.form = this.emptyForm(); this.dialogOpen.set(true); }
-  startEdit(r: RouteRecord): void {
-    this.editingId.set(r.id);
-    this.form = { name: r.name, origin: r.origin, destination: r.destination, driver: r.driver, stops: r.stops, distance: r.distance, status: r.status, progress: r.progress, eta: r.eta, date: r.date };
+  startEdit(s: Shipment): void {
+    this.editingId.set(s.id);
+    this.form = { description: s.description, origin: s.origin, destination: s.destination, driver: s.driver, weight: s.weight, status: s.status, priority: s.priority, date: s.date, eta: s.eta };
     this.dialogOpen.set(true);
   }
   submit(): void {
-    if (!this.form.name.trim() || !this.form.origin.trim() || !this.form.destination.trim()) {
-      this.toast.error('Name, origin and destination are required.', 'Validation Error'); return;
+    if (!this.form.description.trim() || !this.form.origin.trim() || !this.form.destination.trim()) {
+      this.toast.error('Description, origin and destination are required.', 'Validation Error'); return;
     }
     if (this.editingId()) {
-      this.routes.update(rs => rs.map(r => r.id === this.editingId() ? { ...r, ...this.form } : r));
-      this.toast.success(`Route "${this.form.name}" updated.`, 'Route Updated');
+      this.shipments.update(ss => ss.map(s => s.id === this.editingId() ? { ...s, ...this.form } : s));
+      this.toast.success('Shipment updated.', 'Updated');
     } else {
-      this.routes.update(rs => [...rs, { id: String(Date.now()), routeId: `RT-0${++this.counter}`, ...this.form }]);
-      this.toast.success(`Route "${this.form.name}" added.`, 'Route Added');
+      const shipmentId = `#SHP-000${++this.counter}`;
+      this.shipments.update(ss => [...ss, { id: String(Date.now()), shipmentId, ...this.form }]);
+      this.toast.success('Shipment created successfully.', 'Shipment Created');
     }
     this.closeDialog();
   }
-  remove(r: RouteRecord): void {
-    this.routes.update(rs => rs.filter(x => x.id !== r.id));
-    this.toast.warning(`Route "${r.name}" removed.`, 'Route Removed');
+  remove(s: Shipment): void {
+    this.shipments.update(ss => ss.filter(x => x.id !== s.id));
+    this.toast.warning(`Shipment ${s.shipmentId} removed.`, 'Removed');
   }
   closeDialog(): void { this.dialogOpen.set(false); this.editingId.set(null); }
   private emptyForm() {
-    return { name: '', origin: '', destination: '', driver: '', stops: 0, distance: '', status: 'On Schedule' as RouteStatus, progress: 0, eta: '', date: new Date().toISOString().split('T')[0] };
+    return { description: '', origin: '', destination: '', driver: '', weight: 0, status: 'Pending' as ShipmentStatus, priority: 'Medium' as 'High' | 'Medium' | 'Low', date: new Date().toISOString().split('T')[0], eta: '' };
   }
 }
